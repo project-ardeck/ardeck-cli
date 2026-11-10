@@ -1,0 +1,27 @@
+[
+    (
+        preset_name: "Default Preset",
+        mappinglist: [
+            (
+                switch_kind: Digital,
+                switch_id: 2,
+                press_key: 'a',
+            ),
+            (
+                switch_kind: Digital,
+                switch_id: 3,
+                press_key: 'b',
+            ),
+        ],
+    ),
+    (
+        preset_name: "Action Game Preset",
+        mappinglist: [
+            (
+                switch_kind: Digital,
+                switch_id: 10,
+                press_key: 'w',
+            ),
+        ],
+    ),
+]
