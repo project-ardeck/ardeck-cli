@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use ardeck::ConnectionOption;
 use enigo::Keyboard;
 
 use crate::config::load_config;
@@ -65,46 +66,50 @@ fn main() {
         }
     };
 
-    let ardeck = ardeck::Connection::new(selected_port_name, 9600).unwrap();
+    let ardeck = ardeck::Connection::new(
+        ConnectionOption::default()
+            .port_name(selected_port_name)
+            .baud_rate(9600)
+            .auto_recv_mode(true),
+    )
+    .unwrap();
 
     let rx = ardeck.action_receiver();
     let rx = rx.lock().unwrap();
     let exit_flag = ardeck.exit_flag();
-
-    ardeck
-        .conrol_sender()
-        .send(ardeck::ControlMessage::RequestStartTriggeredContinuousMode)
-        .unwrap();
 
     let mut enigo = enigo::Enigo::new(&enigo::Settings::default()).unwrap();
     loop {
         if exit_flag.load(std::sync::atomic::Ordering::Relaxed) {
             break;
         }
-        if let Ok(switch_info) = rx.recv() {
-            println!("{:?}", switch_info);
-            for switch in switch_info {
-                println!("{:?}", switch);
-                let target: Vec<&config::Mapping> = selected_profile
-                    .mappinglist()
-                    .iter()
-                    .filter(|mapping| {
-                        mapping.switch_kind() == switch.kind()
-                            && mapping.switch_id() == switch.pin()
-                    })
-                    .collect();
+        match rx.recv() {
+            Ok(switch_info) => {
+                println!("{:?}", switch_info);
+                for switch in switch_info {
+                    println!("{:?}", switch);
+                    let target: Vec<&config::Mapping> = selected_profile
+                        .mappinglist()
+                        .iter()
+                        .filter(|mapping| {
+                            mapping.switch_kind() == switch.kind()
+                                && mapping.switch_id() == switch.pin()
+                        })
+                        .collect();
 
-                for map in target {
-                    if switch.state() == 1 {
-                        let key = map.press_key();
-                        if let Err(_e) =
-                            enigo.key(enigo::Key::Unicode(key), enigo::Direction::Click)
-                        {
-                            eprintln!("Failed to press key.");
-                        };
+                    for map in target {
+                        if switch.state() == 1 {
+                            let key = map.press_key();
+                            if let Err(_e) =
+                                enigo.key(enigo::Key::Unicode(key), enigo::Direction::Click)
+                            {
+                                eprintln!("Failed to press key.");
+                            };
+                        }
                     }
                 }
             }
+            Err(e) => {}
         }
     }
 }
